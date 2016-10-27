@@ -65,12 +65,10 @@ class MyGLSurfaceView extends GLSurfaceView {
 class GLRenderer implements GLSurfaceView.Renderer {
 
     DEM dem;
-    DEM2 dem2;
 
     @Override
     public void onSurfaceCreated(GL10 gl10, EGLConfig eglConfig) {
         glClearColor(1, 1, 1, 1);
-        dem2 = new DEM2();
         dem = new DEM();
     }
 
@@ -101,6 +99,5 @@ class GLRenderer implements GLSurfaceView.Renderer {
         //triangle.draw(projectionMatrix, viewMatrix);
         //new Square(new Vertex(0.5f, 0.5f, 0.5f), 0.1f).draw(CTM);
         //new Square(new Vertex(-0.5f, 0.5f, 0.5f), 0.5f).draw(CTM);
-        dem2.draw(projectionMatrix, viewMatrix);
     }
 }
