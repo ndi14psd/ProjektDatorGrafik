@@ -4,31 +4,25 @@ import static android.opengl.GLES20.glCompileShader;
 import static android.opengl.GLES20.glCreateShader;
 import static android.opengl.GLES20.glShaderSource;
 
-/**
- * Created by Pontus on 2016-10-24.
- */
 class Shaders {
     public final static String VERTEX_SHADER_CODE =
-                    "attribute vec3 vPosition; \n" +
+            "attribute vec3 vPosition; \n" +
                     "uniform mat4 uMVPMatrix;\n" +
-
+                    "uniform float uMaxHeight; \n" +
                     "varying vec4 c; \n" +
-                    "attribute vec4 vColor; \n" +
                     "void main() { \n" +
-                    "  c = vColor; \n" +
-                    "  gl_PointSize = 50; \n" +
-                    "  vec4 point = vec4(vPosition, 1.0); \n" +
-                    "  //point.xy -= 25; \n" +
-                    "  gl_Position = uMVPMatrix * point;\n" +
-                    "  gl_Position.z = 0.0;\n" +
-                    "  gl_Position.w = 1.0;\n" +
+                    "  vec4 position = vec4(vPosition.xy, 0.0, 1.0); \n" +
+                    "  gl_Position = uMVPMatrix * position;\n" +
+                    "  //c = vColor; \n" +
+                    "  float z = max(vPosition.z, 0) / uMaxHeight; \n" +
+                    "  c = vec4(z, z, z, 1); \n" +
                     "}";
 
     public final static String FRAGMENT_SHADER_CODE =
-                    "precision mediump float; \n" +
-                    "uniform vec4 vColor; \n" +
+            "precision mediump float;\n" +
+                    "varying vec4 c;\n" +
                     "void main() {\n" +
-                    "  gl_FragColor = vColor;\n" +
+                    "  gl_FragColor = c;\n" +
                     "}";
 
     public static int loadShader(int type, String shaderCode){

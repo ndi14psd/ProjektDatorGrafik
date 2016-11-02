@@ -1,15 +1,18 @@
 package com.example.pontus.projektdatorgrafik;
 
 import android.content.Context;
+import android.content.res.AssetManager;
 import android.graphics.Point;
-import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Display;
 
-import java.util.Arrays;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -53,23 +56,45 @@ class MyGLSurfaceView extends GLSurfaceView {
 
     public MyGLSurfaceView(Context context) {
         super(context);
+        InputStream inputStream;
+
+        //String fileName = "ArcGridTestFile.txt";
+        String fileName = "DEM.txt";
+        AssetManager manager = context.getAssets();
+
+        try {
+            inputStream = manager.open(fileName);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        renderer = new GLRenderer(inputStream);
 
         setEGLContextClientVersion(2);
 
-        renderer = new GLRenderer();
         setRenderer(renderer);
         setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
+
     }
 }
 
 class GLRenderer implements GLSurfaceView.Renderer {
 
-    DEM dem;
+    private DEM dem;
+    private final ArcGridTextFileParser parser;
+
+    private final float[] viewMatrix = new float[16];
+    private final float[] projectionMatrix = new float[16];
+
+    public GLRenderer(InputStream arcGridFile) {
+        super();
+        parser = new ArcGridTextFileParser(arcGridFile);
+    }
 
     @Override
     public void onSurfaceCreated(GL10 gl10, EGLConfig eglConfig) {
         glClearColor(1, 1, 1, 1);
-        dem = new DEM();
+        dem = new DEM(parser);
     }
 
     @Override
@@ -81,23 +106,13 @@ class GLRenderer implements GLSurfaceView.Renderer {
         Matrix.frustumM(projectionMatrix, 0, -ratio, ratio, -1, 1, 0.5f, 10);
     }
 
-    private final float[] viewMatrix = new float[16];
-    private final float[] projectionMatrix = new float[16];
-
     @Override
     public void onDrawFrame(GL10 gl10) {
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
         Matrix.setIdentityM(viewMatrix, 0);
-        Matrix.translateM(viewMatrix, 0, 0, 0, -0.25f);
+        Matrix.translateM(viewMatrix, 0, 0, 0, -1.0f);
 
-        float[] CTM = new float[16];
-
-        Matrix.multiplyMM(CTM, 0, projectionMatrix, 0, viewMatrix, 0);
-
-        //dem.draw(projectionMatrix, viewMatrix);
-        //triangle.draw(projectionMatrix, viewMatrix);
-        //new Square(new Vertex(0.5f, 0.5f, 0.5f), 0.1f).draw(CTM);
-        //new Square(new Vertex(-0.5f, 0.5f, 0.5f), 0.5f).draw(CTM);
+        dem.draw(viewMatrix, projectionMatrix);
     }
 }
