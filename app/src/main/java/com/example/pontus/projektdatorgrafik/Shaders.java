@@ -13,13 +13,12 @@ class Shaders {
                     "void main() { \n" +
                     "  vec4 position = vec4(vPosition.xy, 0.0, 1.0); \n" +
                     "  gl_Position = uMVPMatrix * position;\n" +
-                    "  //c = vColor; \n" +
-                    "  float z = max(vPosition.z, 0) / uMaxHeight; \n" +
-                    "  c = vec4(z, z, z, 1); \n" +
+                    "  float z = max(vPosition.z, 0.0) / uMaxHeight; \n" +
+                    "  c = vec4(z, z, z, 1.0); \n" +
                     "}";
 
     public final static String FRAGMENT_SHADER_CODE =
-            "precision mediump float;\n" +
+            "precision highp float;\n" +
                     "varying vec4 c;\n" +
                     "void main() {\n" +
                     "  gl_FragColor = c;\n" +

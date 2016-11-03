@@ -34,13 +34,13 @@ public class DEM {
         yMax = nRows * cellSize;
         maxHeight = 50.0f;
 
-        heightValues = new float[][] {
-            {-9999, -9999, 5, 2},
-            {-9999, 20, 100, 36},
-            {3, 8, 35, 10},
-            {32, 42, 50, 6},
-            {88, 75, 27, 9},
-            {13, 5, 1, -9999}
+        heightValues = new float[][]{
+                {-9999, -9999, 5, 2},
+                {-9999, 20, 100, 36},
+                {3, 8, 35, 10},
+                {32, 42, 50, 6},
+                {88, 75, 27, 9},
+                {13, 5, 1, -9999}
         };
 
         final short[] indices = drawingOrderIndices(nCols);
@@ -91,7 +91,7 @@ public class DEM {
     public void draw(float[] viewMatrix, float[] projectionMatrix) {
         float[] mvpMatrix = calcMVPMatrix(viewMatrix, projectionMatrix);
 
-        for(int i = 0; i < nRows - 1; i++)
+        for (int i = 0; i < nRows - 1; i++)
             drawTriangleStripRow(mvpMatrix, i);
     }
 
@@ -121,8 +121,8 @@ public class DEM {
         float[] vertices = new float[nbrOfRows * nCols * VERTEX_POS_SIZE];
 
         int verticesCounter = 0;
-        for(int row = rowIndexStart; row < rowIndexStart + nbrOfRows; row++)
-            for(int col = 0; col < nCols; col++) {
+        for (int row = rowIndexStart; row < rowIndexStart + nbrOfRows; row++)
+            for (int col = 0; col < nCols; col++) {
                 float[] vertex = transformToVertex(heightMap[row][col], col + 1, row + 1);
                 vertices[verticesCounter] = vertex[0];
                 vertices[verticesCounter + 1] = vertex[1];
@@ -133,7 +133,7 @@ public class DEM {
     }
 
     private float[] transformToVertex(float z, int colIndex, int rowIndex) {
-        return new float[] {
+        return new float[]{
                 (cellSize / 2) + (colIndex - 1) * cellSize,
                 (yMax - (cellSize / 2)) - (rowIndex - 1) * cellSize,
                 z
@@ -142,7 +142,7 @@ public class DEM {
 
     private short[] drawingOrderIndices(int rowSize) {
         short[] indices = new short[rowSize * 2];
-        for(short i = 0; i < rowSize; i++) {
+        for (short i = 0; i < rowSize; i++) {
             indices[i * 2] = i;
             indices[i * 2 + 1] = (short) (i + rowSize);
         }
@@ -178,4 +178,3 @@ public class DEM {
         return mvpMatrix;
     }
 }
-

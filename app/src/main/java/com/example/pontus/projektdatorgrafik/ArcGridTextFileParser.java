@@ -49,9 +49,9 @@ public class ArcGridTextFileParser {
     private static List<String> getLines(InputStream stream) {
         List<String> lines = new ArrayList<>();
 
-        try(BufferedReader reader = new BufferedReader(new InputStreamReader(stream))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream))) {
             String line;
-            while((line = reader.readLine()) != null)
+            while ((line = reader.readLine()) != null)
                 lines.add(line.toUpperCase());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -64,7 +64,7 @@ public class ArcGridTextFileParser {
 
         for (int i = 0; i < MetaDataType.values().length; i++) {
             String[] words = lines.get(i).trim().split("\\s+");
-            if(words.length != 2) {
+            if (words.length != 2) {
                 throw new RuntimeException("File is not formatted correctly.");
             }
             metaData.put(MetaDataType.valueOf(words[0]), Float.parseFloat(words[1]));
@@ -87,8 +87,8 @@ public class ArcGridTextFileParser {
 
     private float findMax(float[][] data) {
         float max = 0;
-        for(int row = 0; row < data.length; row++)
-            for(int col = 0; col < data[0].length; col++)
+        for (int row = 0; row < data.length; row++)
+            for (int col = 0; col < data[0].length; col++)
                 max = Math.max(max, data[row][col]);
         return max;
     }

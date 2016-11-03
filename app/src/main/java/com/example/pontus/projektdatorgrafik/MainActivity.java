@@ -21,9 +21,6 @@ import static android.opengl.GLES20.*;
 
 public class MainActivity extends AppCompatActivity {
 
-    private int ySize;
-    private int xSize;
-
     private GLSurfaceView glView;
 
     @Override
@@ -31,23 +28,10 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Display display = getWindowManager().getDefaultDisplay();
-        Point point = new Point();
-        display.getRealSize(point);
-        ySize = point.y;
-        xSize = point.x;
-
         glView = new MyGLSurfaceView(this);
         setContentView(glView);
     }
 
-    public int getYSize() {
-        return ySize;
-    }
-
-    public int getXSize() {
-        return xSize;
-    }
 }
 
 class MyGLSurfaceView extends GLSurfaceView {
@@ -108,11 +92,12 @@ class GLRenderer implements GLSurfaceView.Renderer {
 
     @Override
     public void onDrawFrame(GL10 gl10) {
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         Matrix.setIdentityM(viewMatrix, 0);
         Matrix.translateM(viewMatrix, 0, 0, 0, -1.0f);
 
         dem.draw(viewMatrix, projectionMatrix);
+
     }
 }
