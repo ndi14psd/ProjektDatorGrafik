@@ -9,12 +9,12 @@ import java.nio.ShortBuffer;
 
 import static android.opengl.GLES20.*;
 
-public class DEM {
+public class DigitalElevationModel {
 
     private static final int VERTEX_POS_SIZE = 3;
     private final int program;
 
-    private final float[][] heightValues;
+    private final float[][] heightData;
     private final int nCols;
     private final int nRows;
     private final float cellSize;
@@ -26,22 +26,15 @@ public class DEM {
 
     private final ShortBuffer indexBuffer;
 
-    public DEM() {
-        nCols = 4;
-        nRows = 6;
-        cellSize = 50;
+    public DigitalElevationModel(ArcGridTextFile arcGridTextFile, Shaders shaders) {
+        nCols = arcGridTextFile.getNCols();
+        nRows = arcGridTextFile.getNRows();
+        cellSize = arcGridTextFile.getCellSize();
         xMax = nCols * cellSize;
         yMax = nRows * cellSize;
-        maxHeight = 50.0f;
+        maxHeight = arcGridTextFile.getMaxHeight();
 
-        heightValues = new float[][]{
-                {-9999, -9999, 5, 2},
-                {-9999, 20, 100, 36},
-                {3, 8, 35, 10},
-                {32, 42, 50, 6},
-                {88, 75, 27, 9},
-                {13, 5, 1, -9999}
-        };
+        heightData = arcGridTextFile.getHeightData();
 
         final short[] indices = drawingOrderIndices(nCols);
 
@@ -51,31 +44,8 @@ public class DEM {
                 .put(indices);
         indexBuffer.position(0);
 
-        int vertexShader = Shaders.loadShader(GL_VERTEX_SHADER, Shaders.VERTEX_SHADER_CODE);
-        int fragmentShader = Shaders.loadShader(GL_FRAGMENT_SHADER, Shaders.FRAGMENT_SHADER_CODE);
-        program = initProgram(vertexShader, fragmentShader);
-    }
-
-    public DEM(ArcGridTextFileParser parser) {
-        nCols = parser.getNCols();
-        nRows = parser.getNRows();
-        cellSize = parser.getCellSize();
-        xMax = nCols * cellSize;
-        yMax = nRows * cellSize;
-        maxHeight = parser.getMaxHeight();
-
-        heightValues = parser.getData();
-
-        final short[] indices = drawingOrderIndices(nCols);
-
-        indexBuffer = ByteBuffer.allocateDirect(VERTEX_POS_SIZE * nCols * 2) // Two rows, each element 4 bytes
-                .order(ByteOrder.nativeOrder())
-                .asShortBuffer()
-                .put(indices);
-        indexBuffer.position(0);
-
-        int vertexShader = Shaders.loadShader(GL_VERTEX_SHADER, Shaders.VERTEX_SHADER_CODE);
-        int fragmentShader = Shaders.loadShader(GL_FRAGMENT_SHADER, Shaders.FRAGMENT_SHADER_CODE);
+        int vertexShader = shaders.loadVertexShader();
+        int fragmentShader = shaders.loadFragmentShader();
         program = initProgram(vertexShader, fragmentShader);
     }
 
@@ -88,8 +58,8 @@ public class DEM {
         return program;
     }
 
-    public void draw(float[] viewMatrix, float[] projectionMatrix) {
-        float[] mvpMatrix = calcMVPMatrix(viewMatrix, projectionMatrix);
+    public void draw(float[] viewMatrix, float[] projectionMatrix, float[] rotationMatrix) {
+        float[] mvpMatrix = calcMVPMatrix(viewMatrix, projectionMatrix, rotationMatrix);
 
         for (int i = 0; i < nRows - 1; i++)
             drawTriangleStripRow(mvpMatrix, i);
@@ -98,7 +68,7 @@ public class DEM {
     public void drawTriangleStripRow(float[] mvpMatrix, int row) {
         glUseProgram(program);
 
-        FloatBuffer vertexBuffer = createFloatBuffer(rowsToVertices(heightValues, row, 2));
+        FloatBuffer vertexBuffer = createFloatBuffer(rowsToVertices(heightData, row, 2));
         int positionHandle = glGetAttribLocation(program, "vPosition");
         glEnableVertexAttribArray(positionHandle);
         glVertexAttribPointer(positionHandle, VERTEX_POS_SIZE,
@@ -117,13 +87,13 @@ public class DEM {
         glUseProgram(0);
     }
 
-    private float[] rowsToVertices(float[][] heightMap, int rowIndexStart, int nbrOfRows) {
+    private float[] rowsToVertices(float[][] heightValues, int rowIndexStart, int nbrOfRows) {
         float[] vertices = new float[nbrOfRows * nCols * VERTEX_POS_SIZE];
 
         int verticesCounter = 0;
         for (int row = rowIndexStart; row < rowIndexStart + nbrOfRows; row++)
             for (int col = 0; col < nCols; col++) {
-                float[] vertex = transformToVertex(heightMap[row][col], col + 1, row + 1);
+                float[] vertex = transformToVertex(heightValues[row][col], col, row);
                 vertices[verticesCounter] = vertex[0];
                 vertices[verticesCounter + 1] = vertex[1];
                 vertices[verticesCounter + 2] = vertex[2];
@@ -134,8 +104,8 @@ public class DEM {
 
     private float[] transformToVertex(float z, int colIndex, int rowIndex) {
         return new float[]{
-                (cellSize / 2) + (colIndex - 1) * cellSize,
-                (yMax - (cellSize / 2)) - (rowIndex - 1) * cellSize,
+                (cellSize / 2) + colIndex * cellSize,
+                (yMax - (cellSize / 2)) - rowIndex * cellSize,
                 z
         };
     }
@@ -158,22 +128,27 @@ public class DEM {
         return buffer;
     }
 
-    private float[] calcMVPMatrix(float[] viewMatrix, float[] projectionMatrix) {
+    private float[] calcMVPMatrix(float[] viewMatrix, float[] projectionMatrix, float[] additionalTransformationsMatrix) { // AdditionalTransformations include rotation, scaling etc
         float[] mvpMatrix = new float[16];
 
-        final float xTranslationDistance = xMax / 2;
-        final float yTranslationDistance = yMax / 2;
+        final float xScaleFactor = 2 / xMax;
+        final float yScaleFactor = 2 / yMax;
+        final float zScaleFactor = 1 / maxHeight;
 
-        final float xScaleFactor = 1 / xTranslationDistance;
-        final float yScaleFactor = 1 / yTranslationDistance;
+        float[] startingRotationMatrix = new float[16];
+        Matrix.setRotateM(startingRotationMatrix, 0, -70, 1, 0, 0);
+        Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, startingRotationMatrix, 0);
 
-        // View * Scale
-        Matrix.scaleM(mvpMatrix, 0, viewMatrix, 0, xScaleFactor, yScaleFactor, 1);
-        // View * Scale * Translation
-        Matrix.translateM(mvpMatrix, 0, mvpMatrix, 0, -xTranslationDistance, -yTranslationDistance, 0);
-        // Projection * View * Scale * Translation
+        // View * AdditionalTransformation
+        Matrix.multiplyMM(mvpMatrix, 0, mvpMatrix, 0, additionalTransformationsMatrix, 0);
+        // View * AdditionalTransformation * Translation
+        Matrix.translateM(mvpMatrix, 0, mvpMatrix, 0, -1, -1, -1);
+        // View * AdditionalTransformation * Translation * Scale
+        Matrix.scaleM(mvpMatrix, 0, mvpMatrix, 0, xScaleFactor, yScaleFactor, zScaleFactor);
+        // Projection * View * AdditionalTransformation * Translation * Scale
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0);
-        // MVP = Projection * View * Model*/
+        // MVP = Projection * View * Model
+
 
         return mvpMatrix;
     }

@@ -1,6 +1,5 @@
 package com.example.pontus.projektdatorgrafik;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -18,19 +17,19 @@ public class ArcGridTextFileParserTest {
         return new File(PATH, "ArcGridTestFile.txt");
     }
 
-    private ArcGridTextFileParser createInstance(File file) {
-        return new ArcGridTextFileParser(file);
+    private ArcGridTextFile createInstance(File file) {
+        return new ArcGridTextFile(file);
     }
 
     @Test
     public void createUsingInputStream() throws FileNotFoundException {
         FileInputStream stream = new FileInputStream(getTestFile());
-        assertNotNull(new ArcGridTextFileParser(stream));
+        assertNotNull(new ArcGridTextFile(stream));
     }
 
     @Test
     public void getMetaDataFromArcGridTextFile() {
-        ArcGridTextFileParser arcGrid = createInstance(getTestFile());
+        ArcGridTextFile arcGrid = createInstance(getTestFile());
         assertEquals(4, arcGrid.getNCols());
         assertEquals(6, arcGrid.getNRows());
         assertEquals(0.0f, arcGrid.getXLLCorner(), 0.05f);
@@ -46,7 +45,7 @@ public class ArcGridTextFileParserTest {
 
     @Test
     public void getDataFromArcGridTextFile() {
-        ArcGridTextFileParser arcGrid = createInstance(getTestFile());
+        ArcGridTextFile arcGrid = createInstance(getTestFile());
         float[][] expected =  {
                 {-9999, -9999, 5, 2},
                 {-9999, 20, 100, 36},
@@ -55,7 +54,7 @@ public class ArcGridTextFileParserTest {
                 {88, 75, 27, 9},
                 {13, 5, 1, -9999}
         };
-        assertTrue("Reads data correctly", Arrays.deepEquals(arcGrid.getData(), expected));
+        assertTrue("Reads data correctly", Arrays.deepEquals(arcGrid.getHeightData(), expected));
     }
 
     @Test(expected = RuntimeException.class)
@@ -66,13 +65,13 @@ public class ArcGridTextFileParserTest {
     @Test(expected = NullPointerException.class)
     public void shouldThrowWhenFileIsNull() {
         File file = null;
-        new ArcGridTextFileParser(file);
+        new ArcGridTextFile(file);
     }
 
     @Test(expected = NullPointerException.class)
     public void shouldThrowWhenFileInputStreamIsNull() {
         InputStream stream = null;
-        new ArcGridTextFileParser(stream);
+        new ArcGridTextFile(stream);
     }
 
 

@@ -12,7 +12,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
-public class ArcGridTextFileParser {
+public class ArcGridTextFile {
 
     enum MetaDataType {
         NCOLS, NROWS, XLLCENTER, YLLCENTER, CELLSIZE, NODATA_VALUE;
@@ -24,17 +24,17 @@ public class ArcGridTextFileParser {
     private final static int HEIGHT_DATA_START_INDEX = MetaDataType.values().length;
     private final float maxHeight;
 
-    private ArcGridTextFileParser(List<String> lines) {
+    private ArcGridTextFile(List<String> lines) {
         metaData = readMetaData(lines);
         data = readValues(lines);
         maxHeight = findMax(data);
     }
 
-    public ArcGridTextFileParser(File file) {
+    public ArcGridTextFile(File file) {
         this(getLines(file));
     }
 
-    public ArcGridTextFileParser(InputStream stream) {
+    public ArcGridTextFile(InputStream stream) {
         this(getLines(stream));
     }
 
@@ -117,7 +117,7 @@ public class ArcGridTextFileParser {
         return metaData.get(MetaDataType.NODATA_VALUE);
     }
 
-    public float[][] getData() {
+    public float[][] getHeightData() {
         return data;
     }
 
