@@ -15,7 +15,7 @@ import java.util.Map;
 public class ArcGridTextFile {
 
     enum MetaDataType {
-        NCOLS, NROWS, XLLCENTER, YLLCENTER, CELLSIZE, NODATA_VALUE;
+        NCOLS, NROWS, XLLCENTER, YLLCENTER, CELLSIZE, NODATA_VALUE
     }
 
     private final Map<MetaDataType, Float> metaData;
@@ -26,8 +26,8 @@ public class ArcGridTextFile {
 
     private ArcGridTextFile(List<String> lines) {
         metaData = readMetaData(lines);
-        data = readValues(lines);
-        maxHeight = findMax(data);
+        data = readValues(lines, getNCols(), getNRows());
+        maxHeight = findMax(data, getNCols(), getNRows());
     }
 
     public ArcGridTextFile(File file) {
@@ -52,7 +52,8 @@ public class ArcGridTextFile {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream))) {
             String line;
             while ((line = reader.readLine()) != null)
-                lines.add(line.toUpperCase());
+                if(!line.isEmpty())
+                    lines.add(line.toUpperCase());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -63,32 +64,37 @@ public class ArcGridTextFile {
         Map<MetaDataType, Float> metaData = new EnumMap<>(MetaDataType.class);
 
         for (int i = 0; i < MetaDataType.values().length; i++) {
-            String[] words = lines.get(i).trim().split("\\s+");
-            if (words.length != 2) {
-                throw new RuntimeException("File is not formatted correctly.");
+            String[] line = lines.get(i).trim().split("\\s+");
+            if (line.length != 2) {
+                throw new RuntimeException("Meta data error. \nLine " + (i+1) + ", 2 elements expected, actual: " + line.length);
             }
-            metaData.put(MetaDataType.valueOf(words[0]), Float.parseFloat(words[1]));
+            metaData.put(MetaDataType.valueOf(line[0]), Float.parseFloat(line[1]));
         }
         return metaData;
     }
 
-    private static float[][] readValues(final List<String> lines) {
+    private static float[][] readValues(List<String> lines, int nCols, int nRows) {
         List<String> heightLines = lines.subList(HEIGHT_DATA_START_INDEX, lines.size());
-        float[][] values = new float[heightLines.size()][];
+        if(heightLines.size() != nRows) {
+            throw new RuntimeException("Number height values don't match with nRows value! \nnRows: " + nRows + ", actual: " + heightLines.size());
+        }
+        float[][] values = new float[nRows][nCols];
 
-        for (int row = 0; row < heightLines.size(); row++) {
-            String[] words = heightLines.get(row).trim().split("\\s+");
-            values[row] = new float[words.length];
-            for (int col = 0; col < words.length; col++)
-                values[row][col] = Float.parseFloat(words[col]);
+        for (int row = 0; row < nRows; row++) {
+            String[] line = heightLines.get(row).trim().split("\\s+");
+            if(line.length != nCols) {
+                throw new RuntimeException("Height value rows are not all formatted properly! \nrow number: " + (row + 1) + " nCols: " + nCols + ", actual: " + line.length);
+            }
+            for (int col = 0; col < nCols; col++)
+                values[row][col] = Float.parseFloat(line[col]);
         }
         return values;
     }
 
-    private float findMax(float[][] data) {
+    private float findMax(float[][] data, int nCols, int nRows) {
         float max = 0;
-        for (int row = 0; row < data.length; row++)
-            for (int col = 0; col < data[0].length; col++)
+        for (int row = 0; row < nRows; row++)
+            for (int col = 0; col < nCols; col++)
                 max = Math.max(max, data[row][col]);
         return max;
     }

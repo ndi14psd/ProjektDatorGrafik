@@ -69,7 +69,7 @@ class MyGLSurfaceView extends GLSurfaceView {
 
                 float dx = x - previousX;
 
-                renderer.xAngle += dx * TOUCH_SCALE_FACTOR;
+                renderer.angle += dx * TOUCH_SCALE_FACTOR;
                 requestRender();
         }
 
@@ -100,7 +100,7 @@ class GLRenderer implements GLSurfaceView.Renderer {
     private final float[] viewMatrix = new float[16];
     private final float[] projectionMatrix = new float[16];
 
-    public volatile float xAngle;
+    public volatile float angle;
     private float scaleFactor = 1.f;
 
     public GLRenderer(InputStream arcGridInputStream, Shaders shaders) {
@@ -121,7 +121,7 @@ class GLRenderer implements GLSurfaceView.Renderer {
 
         float ratio = (float) width / height;
 
-        Matrix.frustumM(projectionMatrix, 0, -ratio, ratio, -1, 1, 0.5f, 10);
+        Matrix.frustumM(projectionMatrix, 0, -ratio, ratio, -1, 1, 0.5f, 100);
     }
 
     @Override
@@ -130,13 +130,19 @@ class GLRenderer implements GLSurfaceView.Renderer {
         glEnable(GL_DEPTH_TEST);
 
         Matrix.setIdentityM(viewMatrix, 0);
-        Matrix.translateM(viewMatrix, 0, 0, 0.5f, -2.0f);
+        Matrix.translateM(viewMatrix, 0, 0, 0.5f, -1.5f);
 
+        float[] startingRotationMatrix = new float[16];
+        Matrix.setRotateM(startingRotationMatrix, 0, -60, 1, 0, 0);
+        Matrix.multiplyMM(viewMatrix, 0, viewMatrix, 0, startingRotationMatrix, 0);
+
+        // Allow for rotation and pinch to zoom
         float[] scalingRotationMatrix = new float[16];
-        Matrix.setRotateM(scalingRotationMatrix, 0, xAngle, 0, 0, 1);
+        Matrix.setRotateM(scalingRotationMatrix, 0, angle, 0, 0, 1);
         Matrix.scaleM(scalingRotationMatrix, 0, scaleFactor, scaleFactor, scaleFactor);
+        Matrix.multiplyMM(viewMatrix, 0, viewMatrix, 0, scalingRotationMatrix, 0);
 
-        dem.draw(viewMatrix, projectionMatrix, scalingRotationMatrix);
+        dem.draw(viewMatrix, projectionMatrix);
     }
 
     public void multiplyScaleFactor(float factor) {

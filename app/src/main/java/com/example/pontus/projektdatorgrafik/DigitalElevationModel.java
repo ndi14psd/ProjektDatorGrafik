@@ -1,7 +1,6 @@
 package com.example.pontus.projektdatorgrafik;
 
 import android.opengl.Matrix;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -26,19 +25,21 @@ public class DigitalElevationModel {
 
     private final ShortBuffer indexBuffer;
 
+
     public DigitalElevationModel(ArcGridTextFile arcGridTextFile, Shaders shaders) {
         nCols = arcGridTextFile.getNCols();
         nRows = arcGridTextFile.getNRows();
         cellSize = arcGridTextFile.getCellSize();
+
         xMax = nCols * cellSize;
         yMax = nRows * cellSize;
-        maxHeight = arcGridTextFile.getMaxHeight();
 
+        maxHeight = arcGridTextFile.getMaxHeight();
         heightData = arcGridTextFile.getHeightData();
 
-        final short[] indices = drawingOrderIndices(nCols);
+        final short[] indices = getDrawingOrderIndices(nCols);
 
-        indexBuffer = ByteBuffer.allocateDirect(VERTEX_POS_SIZE * nCols * 2) // Two rows, each element 4 bytes
+        indexBuffer = ByteBuffer.allocateDirect(VERTEX_POS_SIZE * nCols * 2)
                 .order(ByteOrder.nativeOrder())
                 .asShortBuffer()
                 .put(indices);
@@ -58,17 +59,19 @@ public class DigitalElevationModel {
         return program;
     }
 
-    public void draw(float[] viewMatrix, float[] projectionMatrix, float[] rotationMatrix) {
-        float[] mvpMatrix = calcMVPMatrix(viewMatrix, projectionMatrix, rotationMatrix);
+    public void draw(float[] viewMatrix, float[] projectionMatrix) {
+        float[] mvpMatrix = calculateMVPMatrix(viewMatrix, projectionMatrix);
 
         for (int i = 0; i < nRows - 1; i++)
             drawTriangleStripRow(mvpMatrix, i);
     }
 
-    public void drawTriangleStripRow(float[] mvpMatrix, int row) {
+    private void drawTriangleStripRow(float[] mvpMatrix, int row) {
         glUseProgram(program);
 
-        FloatBuffer vertexBuffer = createFloatBuffer(rowsToVertices(heightData, row, 2));
+        float[] verticesInRows = rowsToVertices(heightData, row, 2);
+        FloatBuffer vertexBuffer = createFloatBuffer(verticesInRows);
+
         int positionHandle = glGetAttribLocation(program, "vPosition");
         glEnableVertexAttribArray(positionHandle);
         glVertexAttribPointer(positionHandle, VERTEX_POS_SIZE,
@@ -87,13 +90,14 @@ public class DigitalElevationModel {
         glUseProgram(0);
     }
 
+
     private float[] rowsToVertices(float[][] heightValues, int rowIndexStart, int nbrOfRows) {
         float[] vertices = new float[nbrOfRows * nCols * VERTEX_POS_SIZE];
 
         int verticesCounter = 0;
         for (int row = rowIndexStart; row < rowIndexStart + nbrOfRows; row++)
             for (int col = 0; col < nCols; col++) {
-                float[] vertex = transformToVertex(heightValues[row][col], col, row);
+                float[] vertex = toVertex(heightValues[row][col], col, row);
                 vertices[verticesCounter] = vertex[0];
                 vertices[verticesCounter + 1] = vertex[1];
                 vertices[verticesCounter + 2] = vertex[2];
@@ -102,7 +106,7 @@ public class DigitalElevationModel {
         return vertices;
     }
 
-    private float[] transformToVertex(float z, int colIndex, int rowIndex) {
+    private float[] toVertex(float z, int colIndex, int rowIndex) {
         return new float[]{
                 (cellSize / 2) + colIndex * cellSize,
                 (yMax - (cellSize / 2)) - rowIndex * cellSize,
@@ -110,7 +114,7 @@ public class DigitalElevationModel {
         };
     }
 
-    private short[] drawingOrderIndices(int rowSize) {
+    private short[] getDrawingOrderIndices(int rowSize) {
         short[] indices = new short[rowSize * 2];
         for (short i = 0; i < rowSize; i++) {
             indices[i * 2] = i;
@@ -119,7 +123,7 @@ public class DigitalElevationModel {
         return indices;
     }
 
-    private FloatBuffer createFloatBuffer(float[] data) {
+    private static FloatBuffer createFloatBuffer(float[] data) {
         FloatBuffer buffer = ByteBuffer.allocateDirect(data.length * 4)
                 .order(ByteOrder.nativeOrder())
                 .asFloatBuffer()
@@ -128,28 +132,21 @@ public class DigitalElevationModel {
         return buffer;
     }
 
-    private float[] calcMVPMatrix(float[] viewMatrix, float[] projectionMatrix, float[] additionalTransformationsMatrix) { // AdditionalTransformations include rotation, scaling etc
+    private float[] calculateMVPMatrix(float[] viewMatrix, float[] projectionMatrix) {
         float[] mvpMatrix = new float[16];
 
         final float xScaleFactor = 2 / xMax;
         final float yScaleFactor = 2 / yMax;
-        final float zScaleFactor = 1 / maxHeight;
+        final float zScaleFactor = 0.5f / maxHeight;
 
-        float[] startingRotationMatrix = new float[16];
-        Matrix.setRotateM(startingRotationMatrix, 0, -70, 1, 0, 0);
-        Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, startingRotationMatrix, 0);
-
-        // View * AdditionalTransformation
-        Matrix.multiplyMM(mvpMatrix, 0, mvpMatrix, 0, additionalTransformationsMatrix, 0);
-        // View * AdditionalTransformation * Translation
-        Matrix.translateM(mvpMatrix, 0, mvpMatrix, 0, -1, -1, -1);
-        // View * AdditionalTransformation * Translation * Scale
+        // View * Translation
+        Matrix.translateM(mvpMatrix, 0, viewMatrix, 0, -1, -1, -1);
+        // View * Translation * Scale
         Matrix.scaleM(mvpMatrix, 0, mvpMatrix, 0, xScaleFactor, yScaleFactor, zScaleFactor);
-        // Projection * View * AdditionalTransformation * Translation * Scale
+        // Projection * View * Translation * Scale
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0);
+
         // MVP = Projection * View * Model
-
-
         return mvpMatrix;
     }
 }

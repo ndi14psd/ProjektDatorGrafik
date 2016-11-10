@@ -22,12 +22,6 @@ public class ArcGridTextFileParserTest {
     }
 
     @Test
-    public void createUsingInputStream() throws FileNotFoundException {
-        FileInputStream stream = new FileInputStream(getTestFile());
-        assertNotNull(new ArcGridTextFile(stream));
-    }
-
-    @Test
     public void getMetaDataFromArcGridTextFile() {
         ArcGridTextFile arcGrid = createInstance(getTestFile());
         assertEquals(4, arcGrid.getNCols());
@@ -54,12 +48,12 @@ public class ArcGridTextFileParserTest {
                 {88, 75, 27, 9},
                 {13, 5, 1, -9999}
         };
-        assertTrue("Reads data correctly", Arrays.deepEquals(arcGrid.getHeightData(), expected));
+        assertTrue("Read height data", Arrays.deepEquals(arcGrid.getHeightData(), expected));
     }
 
     @Test(expected = RuntimeException.class)
     public void shouldThrowWhenInvalidFile() {
-        createInstance(new File(PATH, "Invalid.txt"));
+        createInstance(new File("files\\Invalid.txt"));
     }
 
     @Test(expected = NullPointerException.class)
